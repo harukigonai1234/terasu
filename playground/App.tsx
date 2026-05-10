@@ -143,8 +143,17 @@ export function App() {
     const onMove = (e: MouseEvent) => {
       if (!resizingRef.current) return
       const delta = e.clientX - startX
-      const newWidth = Math.max(280, Math.min(600, startWidth + delta))
-      setPanelWidth(newWidth)
+      const raw = startWidth + delta
+      const screenWidth = window.innerWidth
+
+      // Snap zones: collapse to 0 if dragged below 80px, full-screen if within 80px of edge
+      if (raw < 80) {
+        setPanelWidth(0)
+      } else if (raw > screenWidth - 80) {
+        setPanelWidth(screenWidth)
+      } else {
+        setPanelWidth(raw)
+      }
     }
     const onUp = () => {
       resizingRef.current = false
