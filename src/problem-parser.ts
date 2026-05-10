@@ -52,11 +52,12 @@ const VOLTAGE_PATTERN = /(\d+(?:\.\d+)?)\s*(?:V|volt)/i
 const INCLINE_KEYWORDS = /incline|ramp|slope|inclined plane/i
 const PROJECTILE_KEYWORDS = /launch|projectile|thrown|fired|cliff|trajectory/i
 const ATWOOD_KEYWORDS = /atwood|pulley|two masses.*connected|string over/i
-const CIRCULAR_KEYWORDS = /circular|loop|orbit|banked|curve|centripetal/i
+const CIRCULAR_KEYWORDS = /circular|circle|orbit|banked|curve|centripetal/i
+const CIRCULAR_LOOP_KEYWORD = /\bloop\b/i
 const SPRING_KEYWORDS = /spring|oscillat|harmonic|shm/i
 const COLLISION_KEYWORDS = /collid|collision|impact|bullet.*block|ballistic/i
 const CHARGE_KEYWORDS = /charge|electric field|coulomb|dipole|capacitor/i
-const CIRCUIT_KEYWORDS = /circuit|resistor|capacitor.*charge|rc|rl|battery/i
+const CIRCUIT_KEYWORDS = /circuit|resistor|capacitor.*charge|\brc\b|\brl\b|battery/i
 
 export function parseProblem(text: string): ParsedProblem {
   const normalized = text.toLowerCase().trim()
@@ -74,11 +75,30 @@ function detectProblemType(text: string): ProblemType {
   if (INCLINE_KEYWORDS.test(text)) return 'inclined-plane'
   if (PROJECTILE_KEYWORDS.test(text)) return 'projectile'
   if (ATWOOD_KEYWORDS.test(text)) return 'atwood-machine'
-  if (CIRCULAR_KEYWORDS.test(text)) return 'circular-motion'
+
+  const hasCircular = CIRCULAR_KEYWORDS.test(text) || CIRCULAR_LOOP_KEYWORD.test(text)
+  const hasCircuit = CIRCUIT_KEYWORDS.test(text)
+  const hasCharge = CHARGE_KEYWORDS.test(text)
+
+  // If circular keywords are present but charge/circuit keywords also match,
+  // prefer the EM type (charge density on arcs, circuit loops, etc.)
+  if (hasCircular && !hasCircuit && !hasCharge) return 'circular-motion'
+
   if (SPRING_KEYWORDS.test(text)) return 'spring-mass'
   if (COLLISION_KEYWORDS.test(text)) return 'collision'
-  if (CIRCUIT_KEYWORDS.test(text)) return 'rc-circuit'
-  if (CHARGE_KEYWORDS.test(text)) return 'charged-particle'
+
+  // For circuit vs charge: circuit is more specific
+  if (hasCircuit) return 'rc-circuit'
+  if (hasCharge) return 'charged-particle'
+
+  // Circular motion that co-occurs with EM keywords: check if it's truly
+  // circular motion (e.g., "circular orbit in magnetic field") vs. geometric shape in EM context
+  if (hasCircular) {
+    // If the problem mentions magnetic field + circular orbit/motion, it's circular-motion
+    if (/magnetic/i.test(text)) return 'circular-motion'
+    // Otherwise (semicircular arc of charge, etc.) fall through to unknown
+  }
+
   return 'unknown'
 }
 
@@ -95,8 +115,8 @@ function extractObjects(text: string): PhysicsObject[] {
     })
   }
 
-  // Detect multiple masses (e.g., "4 kg and 6 kg")
-  const multiMass = text.match(/(\d+(?:\.\d+)?)\s*kg\s*(?:and|,)\s*(\d+(?:\.\d+)?)\s*kg/i)
+  // Detect multiple masses (e.g., "4 kg and 6 kg" or "4 kg mass and a 6 kg mass")
+  const multiMass = text.match(/(\d+(?:\.\d+)?)\s*kg\s*(?:mass\s*)?(?:and|,)\s*(?:a\s+)?(\d+(?:\.\d+)?)\s*kg/i)
   if (multiMass) {
     objects.length = 0
     objects.push({
@@ -192,7 +212,7 @@ function extractConstraints(text: string, type: ProblemType): Constraint[] {
     constraints.push({ type: 'initial-condition', properties: { v0: 0 } })
   }
 
-  if (/released/i.test(text)) {
+  if (/released|drops?\b|dropped/i.test(text)) {
     constraints.push({ type: 'initial-condition', properties: { v0: 0, released: true } })
   }
 
@@ -202,20 +222,20 @@ function extractConstraints(text: string, type: ProblemType): Constraint[] {
 function extractUnknowns(text: string): string[] {
   const unknowns: string[] = []
 
-  if (/find.*acceleration|acceleration.*find|what is the acceleration/i.test(text)) unknowns.push('acceleration')
-  if (/find.*speed|speed.*find|how fast|what is the speed|find.*velocity/i.test(text)) unknowns.push('speed')
-  if (/find.*tension|tension.*find/i.test(text)) unknowns.push('tension')
-  if (/find.*normal|normal force/i.test(text)) unknowns.push('normal_force')
-  if (/find.*time|how long|time.*find/i.test(text)) unknowns.push('time')
-  if (/find.*distance|how far|range/i.test(text)) unknowns.push('distance')
-  if (/find.*force|force.*required|minimum force/i.test(text)) unknowns.push('force')
-  if (/find.*energy|energy.*find/i.test(text)) unknowns.push('energy')
-  if (/find.*current|current.*find/i.test(text)) unknowns.push('current')
-  if (/find.*voltage|voltage.*find/i.test(text)) unknowns.push('voltage')
+  if (/(?:find|calculate|determine).*acceleration|acceleration.*(?:find|calculate)|what is the acceleration/i.test(text)) unknowns.push('acceleration')
+  if (/(?:find|calculate|determine).*speed|speed.*(?:find|calculate)|how fast|what is the speed|(?:find|calculate|determine).*velocity/i.test(text)) unknowns.push('speed')
+  if (/(?:find|calculate|determine).*tension|tension.*(?:find|calculate)/i.test(text)) unknowns.push('tension')
+  if (/(?:find|calculate|determine).*normal|normal force/i.test(text)) unknowns.push('normal_force')
+  if (/(?:find|calculate|determine).*time|how long|time.*(?:find|calculate)/i.test(text)) unknowns.push('time')
+  if (/(?:find|calculate|determine).*distance|how far|range/i.test(text)) unknowns.push('distance')
+  if (/(?:find|calculate|determine).*force|force.*required|minimum force/i.test(text)) unknowns.push('force')
+  if (/(?:find|calculate|determine).*energy|energy.*(?:find|calculate)/i.test(text)) unknowns.push('energy')
+  if (/(?:find|calculate|determine).*current|current.*(?:find|calculate)/i.test(text)) unknowns.push('current')
+  if (/(?:find|calculate|determine).*voltage|voltage.*(?:find|calculate)/i.test(text)) unknowns.push('voltage')
   if (/does it slide|will it slide|whether.*slide/i.test(text)) unknowns.push('slides')
-  if (/find.*period|period.*find/i.test(text)) unknowns.push('period')
-  if (/find.*frequency|frequency.*find/i.test(text)) unknowns.push('frequency')
-  if (/find.*electric field|field.*find/i.test(text)) unknowns.push('electric_field')
+  if (/(?:find|calculate|determine).*period|period.*(?:find|calculate)/i.test(text)) unknowns.push('period')
+  if (/(?:find|calculate|determine).*frequency|frequency.*(?:find|calculate)/i.test(text)) unknowns.push('frequency')
+  if (/(?:find|calculate|determine).*electric field|field.*(?:find|calculate)/i.test(text)) unknowns.push('electric_field')
 
   return unknowns
 }
