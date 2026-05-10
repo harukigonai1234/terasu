@@ -1,0 +1,5 @@
+export { DipoleExploration, createDipoleExploration } from './dipole'
+export { OscillatorExploration, createOscillatorExploration } from './oscillator'
+export { DoublePendulumExploration, createDoublePendulumExploration } from './double-pendulum'
+export { WaveInterferenceExploration, createWaveInterferenceExploration } from './wave-interference'
+export { LorenzExploration, createLorenzExploration } from './lorenz'
