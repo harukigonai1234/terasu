@@ -63,6 +63,7 @@ export function App() {
   const animFrameRef = useRef<number | null>(null)
   const resizingRef = useRef(false)
   const rendererRef = useRef<any>(null)
+  const savedParamValues = useRef<Record<string, number>>({})
 
   const run = useCallback(() => {
     setError(null)
@@ -86,9 +87,23 @@ export function App() {
     }
 
     try {
-      // Wrap createRenderer to capture reference and inject grid settings
+      // Wrap createParamSet to restore saved values across re-runs
       const wrappedTerasu = {
         ...terasu,
+        createParamSet() {
+          const ps = terasu.createParamSet()
+          const originalAdd = ps.add.bind(ps)
+          ps.add = (name: string, config: any) => {
+            const saved = savedParamValues.current[name]
+            if (saved !== undefined) {
+              config = { ...config, value: saved }
+            }
+            const p = originalAdd(name, config)
+            p.subscribe((v: number) => { savedParamValues.current[name] = v })
+            return p
+          }
+          return ps
+        },
         createRenderer(config: any) {
           const r = terasu.createRenderer(config)
           rendererRef.current = r
