@@ -83,8 +83,9 @@ function draw() {
   renderer.drawVectorField(sys.phasePortrait(domain), { resolution: 20 })
   const colors = ['#c74440', '#2d70b3', '#388c46', '#6042a6']
   const initials = [[3, 0], [-2, 2], [0, -3], [2, 2]]
+  const duration = Math.max(0.1, t.value)
   initials.forEach((init, i) => {
-    const traj = sys.trajectory({ initial: init, duration: 20, dt: 0.02 })
+    const traj = sys.trajectory({ initial: init, duration: duration, dt: 0.02 })
     renderer.drawTrajectory(traj, { color: colors[i] })
   })
   requestAnimationFrame(draw)
@@ -124,10 +125,11 @@ const initials = [
 const ui = createUI({ container: controls, params })
 
 function draw() {
+  const duration = Math.max(0.1, t.value)
   renderer.clear()
   renderer.drawGrid()
   initials.forEach((init, i) => {
-    const traj = sys.trajectory({ initial: init, duration: 15, dt: 0.005 })
+    const traj = sys.trajectory({ initial: init, duration: duration, dt: 0.005 })
     const points = traj.map(s => {
       return [Math.sin(s[0]) + Math.sin(s[1]), -Math.cos(s[0]) - Math.cos(s[1])]
     })
@@ -201,7 +203,8 @@ const sys = dynamicalSystem({
 })
 
 function draw() {
-  const traj = sys.trajectory({ initial: [1, 1, 1], duration: 40, dt: 0.005 })
+  const duration = Math.max(0.1, t.value * 2)
+  const traj = sys.trajectory({ initial: [1, 1, 1], duration: duration, dt: 0.005 })
   const projected = traj.map(s => [s[0], s[2]])
   renderer.clear()
   renderer.drawGrid()

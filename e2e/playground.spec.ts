@@ -106,6 +106,48 @@ test.describe('playground e2e (real browser)', () => {
     expect(hasContent).toBe(true)
   })
 
+  test('oscillator: pause freezes trajectory length', async ({ page }) => {
+    // Switch to Explore tab and load oscillator
+    await page.getByRole('tab', { name: /explore/i }).click()
+    await page.getByTestId('template-card-oscillator').click()
+
+    // Wait for it to run
+    await page.waitForTimeout(1000)
+
+    // Pause
+    await page.getByRole('button', { name: /pause/i }).click()
+    await page.waitForTimeout(100)
+
+    // Take pixel snapshot
+    const pixelsBefore = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas')!
+      const ctx = canvas.getContext('2d')!
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+      let count = 0
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) count++
+      }
+      return count
+    })
+
+    // Wait — if paused, pixel count should stay the same
+    await page.waitForTimeout(500)
+
+    const pixelsAfter = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas')!
+      const ctx = canvas.getContext('2d')!
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+      let count = 0
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) count++
+      }
+      return count
+    })
+
+    // Trajectories should not have grown (pixel count stable within noise)
+    expect(Math.abs(pixelsAfter - pixelsBefore)).toBeLessThan(50)
+  })
+
   test('canvas renders something (not blank)', async ({ page }) => {
     await page.waitForTimeout(1000)
 
