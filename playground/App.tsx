@@ -82,12 +82,26 @@ export function App() {
     }
 
     try {
-      // Wrap createRenderer to capture reference for zoom controls
+      // Wrap createRenderer to capture reference and inject grid settings
       const wrappedTerasu = {
         ...terasu,
         createRenderer(config: any) {
           const r = terasu.createRenderer(config)
           rendererRef.current = r
+          // Override drawGrid to pass current grid settings
+          const originalDrawGrid = r.drawGrid.bind(r)
+          r.drawGrid = (s?: any) => originalDrawGrid(s ?? gridSettings)
+          r.setLockViewport(gridSettings.lockViewport)
+          // Apply axis range from settings if user has customized
+          if (gridSettings.xAxis.min !== -10 || gridSettings.xAxis.max !== 10 ||
+              gridSettings.yAxis.min !== -10 || gridSettings.yAxis.max !== 10) {
+            r.setDomain({
+              xMin: gridSettings.xAxis.min,
+              xMax: gridSettings.xAxis.max,
+              yMin: gridSettings.yAxis.min,
+              yMax: gridSettings.yAxis.max,
+            })
+          }
           return r
         },
       }
@@ -127,6 +141,12 @@ export function App() {
       run()
     })
   }
+
+  // Auto-run on code or settings change
+  useEffect(() => {
+    const timer = setTimeout(run, 300)
+    return () => clearTimeout(timer)
+  }, [code, gridSettings, run])
 
   // Resize canvas when window resizes or panel width changes
   useEffect(() => {
@@ -248,7 +268,7 @@ export function App() {
         />
 
         {/* Overlay controls (Desmos-style pillbox) */}
-        <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(30, 30, 50, 0.85)', borderRadius: '6px', padding: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
           <GridSettingsButton onClick={() => setSettingsOpen(true)} />
           <SpaceBetween direction="vertical" size="xxxs">
             <Button iconName="zoom-in" variant="icon" onClick={() => {

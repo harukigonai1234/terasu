@@ -1,6 +1,7 @@
 import { Vec2, vec2, length, normalize } from './vec2'
 import { ScalarField, VectorField, Domain } from './field'
 import { Particle } from './particle'
+import type { GridSettings } from './grid-settings'
 
 // Desmos-inspired palette
 const COLORS = {
@@ -21,7 +22,7 @@ export interface RendererConfig {
 
 export interface Renderer {
   clear(): void
-  drawGrid(): void
+  drawGrid(settings?: GridSettings): void
   drawScalarField(field: ScalarField, options?: ScalarRenderOptions): void
   drawVectorField(field: VectorField, options?: VectorRenderOptions): void
   drawTrajectory(points: number[][], options?: TrajectoryRenderOptions): void
@@ -30,6 +31,7 @@ export interface Renderer {
   screenToWorld(p: Vec2): Vec2
   getDomain(): Domain
   setDomain(domain: Domain): void
+  setLockViewport(locked: boolean): void
   onTrace(callback: TraceCallback | null): void
   onDrag(callback: DragCallback | null): void
   destroy(): void
@@ -80,6 +82,7 @@ export function createRenderer(config: RendererConfig): Renderer {
   let panStart: Vec2 | null = null
   let panDomainStart: Domain | null = null
   const interactive = config.interactive !== false
+  let viewportLocked = false
 
   function getWidth() { return canvas.width }
   function getHeight() { return canvas.height }
@@ -125,6 +128,8 @@ export function createRenderer(config: RendererConfig): Renderer {
       return
     }
 
+    if (viewportLocked) return
+
     isPanning = true
     panStart = pos
     panDomainStart = { ...domain }
@@ -169,6 +174,8 @@ export function createRenderer(config: RendererConfig): Renderer {
 
   function handleWheel(e: WheelEvent) {
     e.preventDefault()
+    if (viewportLocked) return
+
     const pos = getMousePos(e)
     const worldPos = screenToWorld(pos)
 
@@ -198,6 +205,7 @@ export function createRenderer(config: RendererConfig): Renderer {
 
     getDomain() { return { ...domain } },
     setDomain(d: Domain) { domain = { ...d } },
+    setLockViewport(locked: boolean) { viewportLocked = locked },
 
     onTrace(callback: TraceCallback | null) { traceCallback = callback },
     onDrag(callback: DragCallback | null) { dragCallback = callback },
@@ -217,29 +225,38 @@ export function createRenderer(config: RendererConfig): Renderer {
       ctx.fillRect(0, 0, getWidth(), getHeight())
     },
 
-    drawGrid() {
+    drawGrid(settings?: GridSettings) {
+      const showGrid = settings?.showGrid ?? true
+      const showMinor = settings?.showMinorGridlines ?? true
+      const showNumbers = settings?.showAxisNumbers ?? true
+      const showArrows = settings?.showArrows ?? false
+
+      if (!showGrid) return
+
       const w = getWidth()
       const h = getHeight()
-      const stepX = niceStep(domainWidth(), 10)
-      const stepY = niceStep(domainHeight(), 10)
+      const stepX = settings?.xAxis?.step ?? niceStep(domainWidth(), 10)
+      const stepY = settings?.yAxis?.step ?? niceStep(domainHeight(), 10)
 
       // Minor grid
-      const minorStepX = stepX / 5
-      const minorStepY = stepY / 5
-      ctx.strokeStyle = COLORS.gridMinor
-      ctx.lineWidth = 0.5
-      ctx.beginPath()
-      for (let x = Math.ceil(domain.xMin / minorStepX) * minorStepX; x <= domain.xMax; x += minorStepX) {
-        const sx = worldToScreen(vec2(x, 0)).x
-        ctx.moveTo(sx, 0)
-        ctx.lineTo(sx, h)
+      if (showMinor) {
+        const minorStepX = stepX / 5
+        const minorStepY = stepY / 5
+        ctx.strokeStyle = COLORS.gridMinor
+        ctx.lineWidth = 0.5
+        ctx.beginPath()
+        for (let x = Math.ceil(domain.xMin / minorStepX) * minorStepX; x <= domain.xMax; x += minorStepX) {
+          const sx = worldToScreen(vec2(x, 0)).x
+          ctx.moveTo(sx, 0)
+          ctx.lineTo(sx, h)
+        }
+        for (let y = Math.ceil(domain.yMin / minorStepY) * minorStepY; y <= domain.yMax; y += minorStepY) {
+          const sy = worldToScreen(vec2(0, y)).y
+          ctx.moveTo(0, sy)
+          ctx.lineTo(w, sy)
+        }
+        ctx.stroke()
       }
-      for (let y = Math.ceil(domain.yMin / minorStepY) * minorStepY; y <= domain.yMax; y += minorStepY) {
-        const sy = worldToScreen(vec2(0, y)).y
-        ctx.moveTo(0, sy)
-        ctx.lineTo(w, sy)
-      }
-      ctx.stroke()
 
       // Major grid
       ctx.strokeStyle = COLORS.grid
@@ -262,36 +279,42 @@ export function createRenderer(config: RendererConfig): Renderer {
       ctx.lineWidth = 1.5
       ctx.beginPath()
       const originScreen = worldToScreen(vec2(0, 0))
-      // x-axis
       if (domain.yMin <= 0 && domain.yMax >= 0) {
         ctx.moveTo(0, originScreen.y)
         ctx.lineTo(w, originScreen.y)
+        if (showArrows) {
+          drawArrowhead(ctx, w - 2, originScreen.y, 0)
+        }
       }
-      // y-axis
       if (domain.xMin <= 0 && domain.xMax >= 0) {
         ctx.moveTo(originScreen.x, 0)
         ctx.lineTo(originScreen.x, h)
+        if (showArrows) {
+          drawArrowhead(ctx, originScreen.x, 2, -Math.PI / 2)
+        }
       }
       ctx.stroke()
 
       // Tick labels
-      ctx.fillStyle = COLORS.tickText
-      ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'top'
-      for (let x = Math.ceil(domain.xMin / stepX) * stepX; x <= domain.xMax; x += stepX) {
-        if (Math.abs(x) < stepX * 0.01) continue // skip 0
-        const sx = worldToScreen(vec2(x, 0)).x
-        const axisY = Math.min(Math.max(originScreen.y + 4, 4), h - 14)
-        ctx.fillText(formatTick(x), sx, axisY)
-      }
-      ctx.textAlign = 'right'
-      ctx.textBaseline = 'middle'
-      for (let y = Math.ceil(domain.yMin / stepY) * stepY; y <= domain.yMax; y += stepY) {
-        if (Math.abs(y) < stepY * 0.01) continue
-        const sy = worldToScreen(vec2(0, y)).y
-        const axisX = Math.min(Math.max(originScreen.x - 4, 30), w - 4)
-        ctx.fillText(formatTick(y), axisX, sy)
+      if (showNumbers) {
+        ctx.fillStyle = COLORS.tickText
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'top'
+        for (let x = Math.ceil(domain.xMin / stepX) * stepX; x <= domain.xMax; x += stepX) {
+          if (Math.abs(x) < stepX * 0.01) continue
+          const sx = worldToScreen(vec2(x, 0)).x
+          const axisY = Math.min(Math.max(originScreen.y + 4, 4), h - 14)
+          ctx.fillText(formatTick(x), sx, axisY)
+        }
+        ctx.textAlign = 'right'
+        ctx.textBaseline = 'middle'
+        for (let y = Math.ceil(domain.yMin / stepY) * stepY; y <= domain.yMax; y += stepY) {
+          if (Math.abs(y) < stepY * 0.01) continue
+          const sy = worldToScreen(vec2(0, y)).y
+          const axisX = Math.min(Math.max(originScreen.x - 4, 30), w - 4)
+          ctx.fillText(formatTick(y), axisX, sy)
+        }
       }
     },
 
@@ -489,4 +512,12 @@ function defaultColormap(value: number, min: number, max: number): string {
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t
+}
+
+function drawArrowhead(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, x: number, y: number, angle: number) {
+  const size = 8
+  ctx.moveTo(x, y)
+  ctx.lineTo(x - size * Math.cos(angle - 0.4), y - size * Math.sin(angle - 0.4))
+  ctx.moveTo(x, y)
+  ctx.lineTo(x - size * Math.cos(angle + 0.4), y - size * Math.sin(angle + 0.4))
 }
