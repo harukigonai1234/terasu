@@ -299,6 +299,46 @@ export function App() {
                     />
                   </div>
 
+                  {/* Time controls */}
+                  <div style={{ borderTop: '1px solid #414d5c', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Button
+                      iconName={timePlaying ? 'pause' : 'play'}
+                      variant="icon"
+                      onClick={() => {
+                        const next = !timePlaying
+                        setTimePlaying(next)
+                        timeRef.current.playing = next
+                      }}
+                      ariaLabel={timePlaying ? 'Pause' : 'Play'}
+                    />
+                    <Button
+                      iconName="undo"
+                      variant="icon"
+                      onClick={() => {
+                        timeRef.current.t = 0
+                        setTimeDisplay(0)
+                      }}
+                      ariaLabel="Reset time"
+                    />
+                    <Box variant="span" color="text-status-inactive" fontSize="body-s">
+                      t = {timeDisplay.toFixed(2)}
+                    </Box>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {[0.25, 0.5, 1, 2, 5].map(s => (
+                        <Button
+                          key={s}
+                          variant={timeSpeed === s ? 'primary' : 'normal'}
+                          onClick={() => {
+                            setTimeSpeed(s)
+                            timeRef.current.speed = s
+                          }}
+                        >
+                          {s}x
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Controls area */}
                   <div style={{ borderTop: '1px solid #414d5c', padding: '8px 12px', maxHeight: '200px', overflow: 'auto' }}>
                     <div ref={controlsRef} />
@@ -369,58 +409,6 @@ export function App() {
               })
             }} ariaLabel="Zoom Out" />
           </SpaceBetween>
-        </div>
-
-        {/* Time control bar at bottom of canvas */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          padding: '8px 16px',
-          background: 'rgba(30, 30, 50, 0.85)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          borderTop: '1px solid rgba(255,255,255,0.1)',
-        }}>
-          <Button
-            iconName={timePlaying ? 'pause' : 'play'}
-            variant="icon"
-            onClick={() => {
-              const next = !timePlaying
-              setTimePlaying(next)
-              timeRef.current.playing = next
-            }}
-            ariaLabel={timePlaying ? 'Pause' : 'Play'}
-          />
-          <Button
-            iconName="undo"
-            variant="icon"
-            onClick={() => {
-              timeRef.current.t = 0
-              setTimeDisplay(0)
-            }}
-            ariaLabel="Reset time"
-          />
-          <Box variant="span" color="text-status-inactive" fontSize="body-s">
-            t = {timeDisplay.toFixed(2)}
-          </Box>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Box variant="span" color="text-status-inactive" fontSize="body-s">Speed:</Box>
-            {[0.25, 0.5, 1, 2, 5].map(s => (
-              <Button
-                key={s}
-                variant={timeSpeed === s ? 'primary' : 'normal'}
-                onClick={() => {
-                  setTimeSpeed(s)
-                  timeRef.current.speed = s
-                }}
-              >
-                {s}x
-              </Button>
-            ))}
-          </div>
         </div>
 
         {/* Settings modal */}
