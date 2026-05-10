@@ -39,6 +39,7 @@ declare const terasu: {
 };
 declare const canvas: HTMLCanvasElement;
 declare const controls: HTMLElement;
+declare const t: { readonly value: number };
 declare function requestAnimationFrame(fn: FrameRequestCallback): number;
 `
 
@@ -64,6 +65,7 @@ export function App() {
   const resizingRef = useRef(false)
   const rendererRef = useRef<any>(null)
   const savedParamValues = useRef<Record<string, number>>({})
+  const timeRef = useRef({ t: 0, playing: true, speed: 1 })
 
   const run = useCallback(() => {
     setError(null)
@@ -125,13 +127,23 @@ export function App() {
         },
       }
 
-      const wrappedCode = `return (function(terasu, canvas, controls, requestAnimationFrame) { ${code} })`
+      // Built-in clock: t.value auto-advances each frame
+      const clock = timeRef.current
+      clock.t = 0
+      const tParam = { get value() { return clock.t } }
+
+      const wrappedCode = `return (function(terasu, canvas, controls, requestAnimationFrame, t) { ${code} })`
       const factory = new Function(wrappedCode)()
       const wrappedRAF = (fn: FrameRequestCallback) => {
-        animFrameRef.current = window.requestAnimationFrame(fn)
-        return animFrameRef.current
+        animFrameRef.current = window.requestAnimationFrame((timestamp) => {
+          if (clock.playing) {
+            clock.t += 0.016 * clock.speed
+          }
+          fn(timestamp)
+        })
+        return animFrameRef.current!
       }
-      factory(wrappedTerasu, canvas, controlsRef.current, wrappedRAF)
+      factory(wrappedTerasu, canvas, controlsRef.current, wrappedRAF, tParam)
     } catch (err) {
       setError(String(err))
     }

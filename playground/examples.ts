@@ -132,8 +132,6 @@ const domain = { xMin: -5, xMax: 5, yMin: -5, yMax: 5 }
 const renderer = createRenderer({ canvas, domain })
 const ui = createUI({ container: controls, params })
 
-let t = 0
-
 function wave(p, sourcePos, time) {
   const dx = p.x - sourcePos[0]
   const dy = p.y - sourcePos[1]
@@ -148,7 +146,7 @@ function draw() {
     const spacing = 3 / Math.max(n - 1, 1)
     for (let i = 0; i < n; i++) {
       const y = n === 1 ? 0 : -1.5 + i * spacing
-      sum += wave(p, [-4, y], t)
+      sum += wave(p, [-4, y], t.value)
     }
     return sum
   })
@@ -156,7 +154,6 @@ function draw() {
   renderer.clear()
   renderer.drawScalarField(field, { resolution: 80, opacity: 0.6 })
   renderer.drawGrid()
-  t += 0.02
   requestAnimationFrame(draw)
 }
 draw()

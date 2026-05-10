@@ -151,7 +151,6 @@ const sources = params.add('sources', { value: 2, range: [1, 5], step: 1 })
 const domain = { xMin: -5, xMax: 5, yMin: -5, yMax: 5 }
 const renderer = createRenderer({ canvas, domain })
 const ui = createUI({ container: controls, params })
-let t = 0
 
 function draw() {
   const field = scalarField((p) => {
@@ -163,14 +162,13 @@ function draw() {
       const dx = p.x - (-4)
       const dy = p.y - y
       const r = Math.sqrt(dx * dx + dy * dy) + 0.01
-      sum += Math.sin(freq.value * 2 * Math.PI * (r - t)) / r
+      sum += Math.sin(freq.value * 2 * Math.PI * (r - t.value)) / r
     }
     return sum
   })
   renderer.clear()
   renderer.drawScalarField(field, { resolution: 80, opacity: 0.6 })
   renderer.drawGrid()
-  t += 0.02
   requestAnimationFrame(draw)
 }
 draw()`,
