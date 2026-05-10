@@ -7,6 +7,7 @@ import Header from '@cloudscape-design/components/header'
 import SpaceBetween from '@cloudscape-design/components/space-between'
 import Box from '@cloudscape-design/components/box'
 import Container from '@cloudscape-design/components/container'
+import Modal from '@cloudscape-design/components/modal'
 import * as terasu from '../src/index'
 import { examples } from './examples'
 import { GridSettingsPanel, GridSettingsButton } from '../src/grid-settings-panel'
@@ -202,14 +203,17 @@ export function App() {
               </div>
             </Container>
 
-            {settingsOpen && (
-              <Container header={<Header>Graph Settings</Header>}>
-                <GridSettingsPanel
-                  settings={gridSettings}
-                  onChange={setGridSettings}
-                />
-              </Container>
-            )}
+            <Modal
+              visible={settingsOpen}
+              onDismiss={() => setSettingsOpen(false)}
+              header="Graph Settings"
+              size="medium"
+            >
+              <GridSettingsPanel
+                settings={gridSettings}
+                onChange={setGridSettings}
+              />
+            </Modal>
 
             <Container header={<Header>Controls</Header>}>
               <div ref={controlsRef} />
