@@ -34,6 +34,8 @@
   "dependencies": {
     "@cloudscape-design/components": "^3.0.1292",
     "@cloudscape-design/global-styles": "^1.0.58",
+    "@monaco-editor/react": "^4.7.0",
+    "monaco-editor": "^0.55.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   }
