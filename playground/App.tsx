@@ -146,7 +146,6 @@ export function App() {
             clock.t += 0.016 * clock.speed
           }
           fn(timestamp)
-          // Update React time display every 10 frames to avoid excessive re-renders
           frameCount++
           if (frameCount % 10 === 0) {
             setTimeDisplay(clock.t)
@@ -184,11 +183,12 @@ export function App() {
     })
   }
 
-  // Auto-run on code or settings change
+  // Auto-run on code or settings change (NOT on play/pause)
   useEffect(() => {
     const timer = setTimeout(run, 300)
     return () => clearTimeout(timer)
-  }, [code, gridSettings, run])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, gridSettings])
 
   // Resize canvas when window resizes or panel width changes
   useEffect(() => {
