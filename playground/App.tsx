@@ -9,6 +9,8 @@ import Container from '@cloudscape-design/components/container'
 import Textarea from '@cloudscape-design/components/textarea'
 import * as terasu from '../src/index'
 import { examples } from './examples'
+import { GridSettingsPanel, GridSettingsButton } from '../src/grid-settings-panel'
+import { defaultGridSettings, GridSettings } from '../src/grid-settings'
 
 const exampleOptions = [
   { label: 'Electric Dipole', value: 'dipole' },
@@ -22,6 +24,8 @@ export function App() {
   const [selectedExample, setSelectedExample] = useState(exampleOptions[0]!)
   const [code, setCode] = useState(examples.dipole!.trim())
   const [error, setError] = useState<string | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [gridSettings, setGridSettings] = useState<GridSettings>(defaultGridSettings())
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const animFrameRef = useRef<number | null>(null)
@@ -67,13 +71,11 @@ export function App() {
     }
   }, [])
 
-  // Run on mount and when example changes
   useEffect(() => {
     const timer = setTimeout(run, 100)
     return () => clearTimeout(timer)
   }, [code, run])
 
-  // Resize canvas on window resize
   useEffect(() => {
     const handleResize = () => {
       const canvas = canvasRef.current
@@ -126,15 +128,32 @@ export function App() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <Container
-              header={<Header>Visualization</Header>}
+              header={
+                <Header
+                  actions={
+                    <GridSettingsButton onClick={() => setSettingsOpen(!settingsOpen)} />
+                  }
+                >
+                  Visualization
+                </Header>
+              }
             >
-              <div style={{ position: 'relative', width: '100%', height: '400px', background: '#1a1a2e', borderRadius: '4px' }}>
+              <div style={{ position: 'relative', width: '100%', height: '400px', background: '#ffffff', borderRadius: '4px' }}>
                 <canvas
                   ref={canvasRef}
                   style={{ width: '100%', height: '100%', display: 'block' }}
                 />
               </div>
             </Container>
+
+            {settingsOpen && (
+              <Container header={<Header>Graph Settings</Header>}>
+                <GridSettingsPanel
+                  settings={gridSettings}
+                  onChange={setGridSettings}
+                />
+              </Container>
+            )}
 
             <Container header={<Header>Controls</Header>}>
               <div ref={controlsRef} />
