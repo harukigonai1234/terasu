@@ -29,9 +29,15 @@ if (typeof HTMLCanvasElement !== 'undefined') {
       drawImage() {},
       createLinearGradient() { return { addColorStop() {} } },
       createRadialGradient() { return { addColorStop() {} } },
+      fillText() {},
+      strokeText() {},
       measureText() { return { width: 0 } },
       putImageData() {},
       getImageData() { return { data: new Uint8ClampedArray(0) } },
+      font: '11px sans-serif',
+      textAlign: 'start',
+      textBaseline: 'alphabetic',
+      lineCap: 'butt',
     } as unknown as CanvasRenderingContext2D
   } as any
 }
