@@ -9,7 +9,8 @@
     "build": "tsc",
     "dev": "vite --config playground/vite.config.ts playground",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "physics",
@@ -21,6 +22,7 @@
   "author": "Haruki Gonai",
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",

@@ -12,6 +12,7 @@ export default defineConfig({
       ['src/renderer.test.ts', 'happy-dom'],
       ['src/renderer-grid-settings.test.ts', 'happy-dom'],
       ['playground/playground.test.ts', 'happy-dom'],
+      ['playground/pause-e2e.test.tsx', 'happy-dom'],
     ],
     setupFiles: ['./test-setup.ts'],
   },

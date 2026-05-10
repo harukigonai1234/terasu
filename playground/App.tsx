@@ -69,9 +69,14 @@ export function App() {
   const rendererRef = useRef<any>(null)
   const savedParamValues = useRef<Record<string, number>>({})
   const timeRef = useRef({ t: 0, playing: true, speed: 1 })
+  const runGeneration = useRef(0)
 
   const run = useCallback(() => {
     setError(null)
+
+    // Kill any previous animation loop by incrementing generation
+    runGeneration.current++
+    const currentGen = runGeneration.current
 
     if (animFrameRef.current !== null) {
       cancelAnimationFrame(animFrameRef.current)
@@ -143,6 +148,9 @@ export function App() {
       const factory = new Function(wrappedCode)()
       const wrappedRAF = (fn: FrameRequestCallback) => {
         animFrameRef.current = window.requestAnimationFrame((timestamp) => {
+          // Stop if a newer run() has started (old loop is stale)
+          if (runGeneration.current !== currentGen) return
+
           if (timePlayingRef.current) {
             clock.t += 0.016 * clock.speed
           }
@@ -321,6 +329,7 @@ export function App() {
                         max="20"
                         step="0.01"
                         value={timeDisplay}
+                        data-testid="time-slider"
                         onChange={(e) => {
                           const v = parseFloat(e.target.value)
                           timeRef.current.t = v
