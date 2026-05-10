@@ -57,10 +57,9 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [gridSettings, setGridSettings] = useState<GridSettings>(defaultGridSettings())
-  const [panelWidth, setPanelWidth] = useState(380)
+  const [panelWidth, setPanelWidth] = useState(480)
   const [activeTab, setActiveTab] = useState<string>('templates')
   const [timePlaying, setTimePlaying] = useState(true)
-  const [timeSpeed, setTimeSpeed] = useState(1)
   const [timeDisplay, setTimeDisplay] = useState(0)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
@@ -134,7 +133,7 @@ export function App() {
       const clock = timeRef.current
       clock.t = 0
       clock.playing = timePlaying
-      clock.speed = timeSpeed
+      clock.speed = 1
       setTimeDisplay(0)
       const tParam = { get value() { return clock.t } }
 
@@ -299,48 +298,38 @@ export function App() {
                     />
                   </div>
 
-                  {/* Time controls */}
-                  <div style={{ borderTop: '1px solid #414d5c', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Button
-                      iconName={timePlaying ? 'pause' : 'play'}
-                      variant="icon"
-                      onClick={() => {
-                        const next = !timePlaying
-                        setTimePlaying(next)
-                        timeRef.current.playing = next
-                      }}
-                      ariaLabel={timePlaying ? 'Pause' : 'Play'}
-                    />
-                    <Button
-                      iconName="undo"
-                      variant="icon"
-                      onClick={() => {
-                        timeRef.current.t = 0
-                        setTimeDisplay(0)
-                      }}
-                      ariaLabel="Reset time"
-                    />
-                    <Box variant="span" color="text-status-inactive" fontSize="body-s">
-                      t = {timeDisplay.toFixed(2)}
-                    </Box>
-                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {[0.25, 0.5, 1, 2, 5].map(s => (
-                        <Button
-                          key={s}
-                          variant={timeSpeed === s ? 'primary' : 'normal'}
-                          onClick={() => {
-                            setTimeSpeed(s)
-                            timeRef.current.speed = s
-                          }}
-                        >
-                          {s}x
-                        </Button>
-                      ))}
+                  {/* Controls area with built-in t slider */}
+                  <div style={{ borderTop: '1px solid #414d5c', padding: '8px 12px', maxHeight: '300px', overflow: 'auto' }}>
+                    {/* Built-in time slider (Desmos-style: slider + play button) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '4px 0' }}>
+                      <Button
+                        iconName={timePlaying ? 'pause' : 'play'}
+                        variant="icon"
+                        onClick={() => {
+                          const next = !timePlaying
+                          setTimePlaying(next)
+                          timeRef.current.playing = next
+                        }}
+                        ariaLabel={timePlaying ? 'Pause' : 'Play'}
+                      />
+                      <Box variant="span" color="text-status-inactive" fontSize="body-s" fontWeight="bold">t</Box>
+                      <input
+                        type="range"
+                        min="0"
+                        max="20"
+                        step="0.01"
+                        value={timeDisplay}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value)
+                          timeRef.current.t = v
+                          setTimeDisplay(v)
+                        }}
+                        style={{ flex: 1, accentColor: '#539fe5' }}
+                      />
+                      <Box variant="span" color="text-status-inactive" fontSize="body-s" fontWeight="bold">
+                        {timeDisplay.toFixed(2)}
+                      </Box>
                     </div>
-                  </div>
-
-                  {/* Controls area */}
-                  <div style={{ borderTop: '1px solid #414d5c', padding: '8px 12px', maxHeight: '200px', overflow: 'auto' }}>
                     <div ref={controlsRef} />
                     {error && (
                       <Box color="text-status-error" variant="code">
