@@ -61,6 +61,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<string>('templates')
   const [timePlaying, setTimePlaying] = useState(true)
   const [timeDisplay, setTimeDisplay] = useState(0)
+  const timePlayingRef = useRef(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const animFrameRef = useRef<number | null>(null)
@@ -142,7 +143,7 @@ export function App() {
       const factory = new Function(wrappedCode)()
       const wrappedRAF = (fn: FrameRequestCallback) => {
         animFrameRef.current = window.requestAnimationFrame((timestamp) => {
-          if (clock.playing) {
+          if (timePlayingRef.current) {
             clock.t += 0.016 * clock.speed
           }
           fn(timestamp)
@@ -308,6 +309,7 @@ export function App() {
                         onClick={() => {
                           const next = !timePlaying
                           setTimePlaying(next)
+                          timePlayingRef.current = next
                           timeRef.current.playing = next
                         }}
                         ariaLabel={timePlaying ? 'Pause' : 'Play'}
