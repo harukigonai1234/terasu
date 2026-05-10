@@ -1,0 +1,205 @@
+export const examples: Record<string, string> = {
+  dipole: `// Electric dipole field
+const { scalarField, vectorField, createRenderer, createParamSet, createUI, vec2, add, scale, normalize, lengthSq, sub } = terasu
+
+const params = createParamSet()
+const charge = params.add('charge', { value: 1, range: [0.1, 5], unit: 'C' })
+const separation = params.add('separation', { value: 2, range: [0.5, 5], unit: 'm' })
+
+function dipoleField(p) {
+  const d = separation.value / 2
+  const pos = vec2(d, 0)
+  const neg = vec2(-d, 0)
+
+  const r1 = sub(p, pos)
+  const r2 = sub(p, neg)
+  const r1sq = lengthSq(r1)
+  const r2sq = lengthSq(r2)
+
+  if (r1sq < 0.1 || r2sq < 0.1) return vec2(0, 0)
+
+  const E1 = scale(r1, charge.value / (r1sq * Math.sqrt(r1sq)))
+  const E2 = scale(r2, -charge.value / (r2sq * Math.sqrt(r2sq)))
+  return add(E1, E2)
+}
+
+const field = vectorField(dipoleField)
+const domain = { xMin: -5, xMax: 5, yMin: -5, yMax: 5 }
+
+const renderer = createRenderer({ canvas, domain })
+const ui = createUI({ container: controls, params })
+
+function draw() {
+  renderer.clear()
+  renderer.drawVectorField(field, { resolution: 25, color: '#4cc9f0' })
+  requestAnimationFrame(draw)
+}
+draw()
+`,
+
+  oscillator: `// Damped harmonic oscillator phase portrait
+const { dynamicalSystem2D, createRenderer, createParamSet, createUI, vec2 } = terasu
+
+const params = createParamSet()
+const gamma = params.add('gamma', { value: 0.2, range: [0, 2], label: 'Damping γ' })
+const omega = params.add('omega', { value: 1.0, range: [0.1, 5], label: 'Frequency ω' })
+
+const domain = { xMin: -4, xMax: 4, yMin: -4, yMax: 4 }
+const renderer = createRenderer({ canvas, domain })
+const ui = createUI({ container: controls, params })
+
+function draw() {
+  const sys = dynamicalSystem2D({
+    dx: (x, v) => v,
+    dv: (x, v) => -2 * gamma.value * v - omega.value ** 2 * x,
+  })
+
+  renderer.clear()
+  renderer.drawVectorField(sys.phasePortrait(domain), { resolution: 20, color: '#4cc9f0' })
+
+  // Draw a few trajectories
+  const colors = ['#f72585', '#7209b7', '#3a0ca3', '#4361ee']
+  const initials = [[3, 0], [-2, 2], [0, -3], [2, 2]]
+  initials.forEach((init, i) => {
+    const traj = sys.trajectory({ initial: init, duration: 20, dt: 0.02 })
+    renderer.drawTrajectory(traj, { color: colors[i], lineWidth: 2 })
+  })
+
+  requestAnimationFrame(draw)
+}
+draw()
+`,
+
+  pendulum: `// Double pendulum (chaotic trajectories)
+const { dynamicalSystem, createRenderer, createParamSet, createUI, createTimeEvolution, createParticle, vec2, constantForce } = terasu
+
+const params = createParamSet()
+const g = params.add('g', { value: 9.81, range: [1, 20], unit: 'm/s²' })
+
+const domain = { xMin: -3, xMax: 3, yMin: -3, yMax: 3 }
+const renderer = createRenderer({ canvas, domain })
+
+// Double pendulum: state = [θ1, θ2, ω1, ω2], L1=L2=1, m1=m2=1
+const sys = dynamicalSystem({
+  dim: 4,
+  derivative: (s, t, p) => {
+    const [t1, t2, w1, w2] = s
+    const dt = t1 - t2
+    const den = 2 - Math.cos(2 * dt)
+
+    const dw1 = (-g.value * (2 * Math.sin(t1) - Math.sin(t2) * Math.cos(dt))
+                 - Math.sin(dt) * (w2 * w2 + w1 * w1 * Math.cos(dt))) / den
+    const dw2 = (2 * Math.sin(dt) * (w1 * w1 + g.value * Math.cos(t1)
+                 + w2 * w2 * Math.cos(dt) * 0.5)) / den
+
+    return [w1, w2, dw1, dw2]
+  },
+})
+
+// Trace two pendulums with slightly different initial conditions
+const colors = ['#f72585', '#4cc9f0']
+const initials = [
+  [Math.PI * 0.75, Math.PI * 0.5, 0, 0],
+  [Math.PI * 0.75 + 0.01, Math.PI * 0.5, 0, 0],
+]
+
+const ui = createUI({ container: controls, params })
+
+function draw() {
+  renderer.clear()
+  initials.forEach((init, i) => {
+    const traj = sys.trajectory({ initial: init, duration: 15, dt: 0.005 })
+    // Convert (θ1, θ2) to cartesian tip of pendulum 2
+    const points = traj.map(s => {
+      const x = Math.sin(s[0]) + Math.sin(s[1])
+      const y = -Math.cos(s[0]) - Math.cos(s[1])
+      return [x, y]
+    })
+    renderer.drawTrajectory(points, { color: colors[i], lineWidth: 1.5 })
+  })
+  requestAnimationFrame(draw)
+}
+draw()
+`,
+
+  wave: `// 2D wave interference pattern
+const { scalarField, createRenderer, createParamSet, createUI, vec2 } = terasu
+
+const params = createParamSet()
+const freq = params.add('frequency', { value: 3, range: [1, 10], unit: 'Hz' })
+const sources = params.add('sources', { value: 2, range: [1, 5], step: 1 })
+
+const domain = { xMin: -5, xMax: 5, yMin: -5, yMax: 5 }
+const renderer = createRenderer({ canvas, domain })
+const ui = createUI({ container: controls, params })
+
+let t = 0
+
+function wave(p, sourcePos, time) {
+  const dx = p.x - sourcePos[0]
+  const dy = p.y - sourcePos[1]
+  const r = Math.sqrt(dx * dx + dy * dy) + 0.01
+  return Math.sin(freq.value * 2 * Math.PI * (r - time)) / r
+}
+
+function draw() {
+  const field = scalarField((p) => {
+    let sum = 0
+    const n = Math.round(sources.value)
+    const spacing = 3 / Math.max(n - 1, 1)
+    for (let i = 0; i < n; i++) {
+      const y = n === 1 ? 0 : -1.5 + i * spacing
+      sum += wave(p, [-4, y], t)
+    }
+    return sum
+  })
+
+  renderer.clear()
+  renderer.drawScalarField(field, { resolution: 80 })
+  t += 0.02
+  requestAnimationFrame(draw)
+}
+draw()
+`,
+
+  lorenz: `// Lorenz attractor
+const { dynamicalSystem, createRenderer, createParamSet, createUI } = terasu
+
+const params = createParamSet()
+const sigma = params.add('σ', { value: 10, range: [1, 20] })
+const rho = params.add('ρ', { value: 28, range: [1, 50] })
+const beta = params.add('β', { value: 2.667, range: [0.5, 5] })
+
+// Project x-z plane
+const domain = { xMin: -25, xMax: 25, yMin: 0, yMax: 50 }
+const renderer = createRenderer({ canvas, domain })
+const ui = createUI({ container: controls, params })
+
+const sys = dynamicalSystem({
+  dim: 3,
+  derivative: (s) => {
+    const [x, y, z] = s
+    return [
+      sigma.value * (y - x),
+      x * (rho.value - z) - y,
+      x * y - beta.value * z,
+    ]
+  },
+})
+
+function draw() {
+  const traj = sys.trajectory({
+    initial: [1, 1, 1],
+    duration: 40,
+    dt: 0.005,
+  })
+  // Project to x-z plane
+  const projected = traj.map(s => [s[0], s[2]])
+
+  renderer.clear()
+  renderer.drawTrajectory(projected, { color: '#4cc9f0', lineWidth: 0.8 })
+  requestAnimationFrame(draw)
+}
+draw()
+`,
+}
