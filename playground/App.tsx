@@ -116,7 +116,7 @@ export function App() {
     } catch (err) {
       setError(String(err))
     }
-  }, [code])
+  }, [code, gridSettings])
 
   const handleExampleChange = useCallback((value: string) => {
     const exCode = examples[value]
