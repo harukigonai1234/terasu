@@ -59,6 +59,9 @@ export function App() {
   const [gridSettings, setGridSettings] = useState<GridSettings>(defaultGridSettings())
   const [panelWidth, setPanelWidth] = useState(380)
   const [activeTab, setActiveTab] = useState<string>('templates')
+  const [timePlaying, setTimePlaying] = useState(true)
+  const [timeSpeed, setTimeSpeed] = useState(1)
+  const [timeDisplay, setTimeDisplay] = useState(0)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const animFrameRef = useRef<number | null>(null)
@@ -130,8 +133,12 @@ export function App() {
       // Built-in clock: t.value auto-advances each frame
       const clock = timeRef.current
       clock.t = 0
+      clock.playing = timePlaying
+      clock.speed = timeSpeed
+      setTimeDisplay(0)
       const tParam = { get value() { return clock.t } }
 
+      let frameCount = 0
       const wrappedCode = `return (function(terasu, canvas, controls, requestAnimationFrame, t) { ${code} })`
       const factory = new Function(wrappedCode)()
       const wrappedRAF = (fn: FrameRequestCallback) => {
@@ -140,6 +147,11 @@ export function App() {
             clock.t += 0.016 * clock.speed
           }
           fn(timestamp)
+          // Update React time display every 10 frames to avoid excessive re-renders
+          frameCount++
+          if (frameCount % 10 === 0) {
+            setTimeDisplay(clock.t)
+          }
         })
         return animFrameRef.current!
       }
@@ -357,6 +369,58 @@ export function App() {
               })
             }} ariaLabel="Zoom Out" />
           </SpaceBetween>
+        </div>
+
+        {/* Time control bar at bottom of canvas */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: '8px 16px',
+          background: 'rgba(30, 30, 50, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          <Button
+            iconName={timePlaying ? 'pause' : 'play'}
+            variant="icon"
+            onClick={() => {
+              const next = !timePlaying
+              setTimePlaying(next)
+              timeRef.current.playing = next
+            }}
+            ariaLabel={timePlaying ? 'Pause' : 'Play'}
+          />
+          <Button
+            iconName="undo"
+            variant="icon"
+            onClick={() => {
+              timeRef.current.t = 0
+              setTimeDisplay(0)
+            }}
+            ariaLabel="Reset time"
+          />
+          <Box variant="span" color="text-status-inactive" fontSize="body-s">
+            t = {timeDisplay.toFixed(2)}
+          </Box>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Box variant="span" color="text-status-inactive" fontSize="body-s">Speed:</Box>
+            {[0.25, 0.5, 1, 2, 5].map(s => (
+              <Button
+                key={s}
+                variant={timeSpeed === s ? 'primary' : 'normal'}
+                onClick={() => {
+                  setTimeSpeed(s)
+                  timeRef.current.speed = s
+                }}
+              >
+                {s}x
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Settings modal */}
