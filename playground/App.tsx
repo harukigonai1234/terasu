@@ -1,13 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Editor, { OnMount } from '@monaco-editor/react'
-import AppLayout from '@cloudscape-design/components/app-layout'
 import Select from '@cloudscape-design/components/select'
 import Button from '@cloudscape-design/components/button'
-import Header from '@cloudscape-design/components/header'
+import Modal from '@cloudscape-design/components/modal'
 import SpaceBetween from '@cloudscape-design/components/space-between'
 import Box from '@cloudscape-design/components/box'
-import Container from '@cloudscape-design/components/container'
-import Modal from '@cloudscape-design/components/modal'
 import * as terasu from '../src/index'
 import { examples } from './examples'
 import { GridSettingsPanel, GridSettingsButton } from '../src/grid-settings-panel'
@@ -56,9 +53,11 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [gridSettings, setGridSettings] = useState<GridSettings>(defaultGridSettings())
+  const [panelWidth, setPanelWidth] = useState(380)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const animFrameRef = useRef<number | null>(null)
+  const resizingRef = useRef(false)
 
   const run = useCallback(() => {
     setError(null)
@@ -102,7 +101,6 @@ export function App() {
   }, [])
 
   const handleEditorMount: OnMount = (editor, monaco) => {
-    // Add terasu type definitions for autocomplete
     monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
       noSemanticValidation: false,
       noSyntaxValidation: false,
@@ -114,12 +112,12 @@ export function App() {
     })
     monaco.languages.typescript.javascriptDefaults.addExtraLib(TERASU_TYPES, 'terasu.d.ts')
 
-    // Cmd+Enter to run
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       run()
     })
   }
 
+  // Resize canvas when window resizes or panel width changes
   useEffect(() => {
     const handleResize = () => {
       const canvas = canvasRef.current
@@ -131,102 +129,126 @@ export function App() {
       }
     }
     window.addEventListener('resize', handleResize)
+    handleResize()
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [panelWidth])
+
+  // Panel resize drag handling
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    resizingRef.current = true
+    const startX = e.clientX
+    const startWidth = panelWidth
+
+    const onMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return
+      const delta = e.clientX - startX
+      const newWidth = Math.max(280, Math.min(600, startWidth + delta))
+      setPanelWidth(newWidth)
+    }
+    const onUp = () => {
+      resizingRef.current = false
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [panelWidth])
 
   return (
-    <AppLayout
-      navigationHide
-      toolsHide
-      content={
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', height: 'calc(100vh - 120px)' }}>
-          <Container
-            header={
-              <Header
-                actions={
-                  <SpaceBetween direction="horizontal" size="xs">
-                    <Select
-                      selectedOption={selectedExample}
-                      onChange={({ detail }) => {
-                        setSelectedExample(detail.selectedOption as typeof selectedExample)
-                        handleExampleChange(detail.selectedOption.value!)
-                      }}
-                      options={exampleOptions}
-                    />
-                    <Button variant="primary" onClick={run}>Run ⌘↵</Button>
-                  </SpaceBetween>
-                }
-              >
-                Code
-              </Header>
-            }
-          >
-            <div style={{ height: '500px', border: '1px solid #414d5c', borderRadius: '4px', overflow: 'hidden' }}>
-              <Editor
-                height="100%"
-                language="javascript"
-                theme="vs-dark"
-                value={code}
-                onChange={(value) => setCode(value ?? '')}
-                onMount={handleEditorMount}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  tabSize: 2,
-                  wordWrap: 'on',
-                  padding: { top: 12 },
-                }}
-              />
-            </div>
-          </Container>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Container
-              header={
-                <Header
-                  actions={
-                    <GridSettingsButton onClick={() => setSettingsOpen(!settingsOpen)} />
-                  }
-                >
-                  Visualization
-                </Header>
-              }
-            >
-              <div style={{ position: 'relative', width: '100%', height: '400px', background: '#ffffff', borderRadius: '4px' }}>
-                <canvas
-                  ref={canvasRef}
-                  style={{ width: '100%', height: '100%', display: 'block' }}
-                />
-              </div>
-            </Container>
-
-            <Modal
-              visible={settingsOpen}
-              onDismiss={() => setSettingsOpen(false)}
-              header="Graph Settings"
-              size="medium"
-            >
-              <GridSettingsPanel
-                settings={gridSettings}
-                onChange={setGridSettings}
-              />
-            </Modal>
-
-            <Container header={<Header>Controls</Header>}>
-              <div ref={controlsRef} />
-              {error && (
-                <Box color="text-status-error" variant="code">
-                  {error}
-                </Box>
-              )}
-            </Container>
-          </div>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0f1b2d' }}>
+      {/* Left panel: expression list / code editor */}
+      <div style={{ width: `${panelWidth}px`, display: 'flex', flexDirection: 'column', borderRight: '1px solid #414d5c', flexShrink: 0 }}>
+        {/* Toolbar */}
+        <div style={{ padding: '8px 12px', borderBottom: '1px solid #414d5c', display: 'flex', alignItems: 'center', gap: '8px', background: '#1a2332' }}>
+          <Select
+            selectedOption={selectedExample}
+            onChange={({ detail }) => {
+              setSelectedExample(detail.selectedOption as typeof selectedExample)
+              handleExampleChange(detail.selectedOption.value!)
+            }}
+            options={exampleOptions}
+            expandToViewport
+          />
+          <Button variant="primary" onClick={run}>Run</Button>
         </div>
-      }
-      headerSelector="#header"
-    />
+
+        {/* Editor */}
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <Editor
+            height="100%"
+            language="javascript"
+            theme="vs-dark"
+            value={code}
+            onChange={(value) => setCode(value ?? '')}
+            onMount={handleEditorMount}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              wordWrap: 'on',
+              padding: { top: 8 },
+            }}
+          />
+        </div>
+
+        {/* Controls area */}
+        <div style={{ borderTop: '1px solid #414d5c', padding: '8px 12px', maxHeight: '200px', overflow: 'auto', background: '#1a2332' }}>
+          <div ref={controlsRef} />
+          {error && (
+            <Box color="text-status-error" variant="code">
+              {error}
+            </Box>
+          )}
+        </div>
+      </div>
+
+      {/* Resize handle */}
+      <div
+        onMouseDown={handleResizeStart}
+        style={{
+          width: '4px',
+          cursor: 'col-resize',
+          background: 'transparent',
+          flexShrink: 0,
+          zIndex: 10,
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = '#539fe5')}
+        onMouseLeave={(e) => { if (!resizingRef.current) e.currentTarget.style.background = 'transparent' }}
+      />
+
+      {/* Right side: graph */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <canvas
+          ref={canvasRef}
+          style={{ width: '100%', height: '100%', display: 'block' }}
+        />
+
+        {/* Overlay controls (Desmos-style pillbox) */}
+        <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <GridSettingsButton onClick={() => setSettingsOpen(true)} />
+          <SpaceBetween direction="vertical" size="xxxs">
+            <Button iconName="zoom-in" variant="icon" onClick={() => {/* zoom in */}} ariaLabel="Zoom In" />
+            <Button iconName="zoom-out" variant="icon" onClick={() => {/* zoom out */}} ariaLabel="Zoom Out" />
+          </SpaceBetween>
+        </div>
+
+        {/* Settings modal */}
+        <Modal
+          visible={settingsOpen}
+          onDismiss={() => setSettingsOpen(false)}
+          header="Graph Settings"
+          size="medium"
+        >
+          <GridSettingsPanel
+            settings={gridSettings}
+            onChange={setGridSettings}
+          />
+        </Modal>
+      </div>
+    </div>
   )
 }
