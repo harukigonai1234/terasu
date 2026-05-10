@@ -1,195 +1,198 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { createUI } from './ui'
 import { createParamSet } from './param'
 import { createTimeEvolution } from './time-evolution'
 
-// Minimal DOM mock
-function mockDOM() {
-  const elements: any[] = []
-  const head = { appendChild: vi.fn() }
-
-  const createElement = (tag: string) => {
-    const el: any = {
-      tag,
-      className: '',
-      textContent: '',
-      type: '',
-      min: '',
-      max: '',
-      step: '',
-      value: '',
-      children: [] as any[],
-      classList: { add: vi.fn() },
-      style: { textContent: '' },
-      listeners: {} as Record<string, Function[]>,
-      appendChild(child: any) { el.children.push(child); return child },
-      remove: vi.fn(),
-      querySelector: (sel: string) => {
-        return findInTree(el, sel)
-      },
-      addEventListener(event: string, fn: Function) {
-        if (!el.listeners[event]) el.listeners[event] = []
-        el.listeners[event].push(fn)
-      },
-    }
-    elements.push(el)
-    return el
-  }
-
-  function findInTree(el: any, className: string): any {
-    const cls = className.replace('.', '')
-    if (el.className === cls) return el
-    for (const child of el.children || []) {
-      const found = findInTree(child, className)
-      if (found) return found
-    }
-    return null
-  }
-
-  ;(globalThis as any).document = {
-    createElement,
-    head,
-  }
-
-  return { elements, createElement, head }
-}
-
 describe('createUI', () => {
+  let container: HTMLElement
+
   beforeEach(() => {
-    mockDOM()
+    document.body.innerHTML = ''
+    container = document.createElement('div')
+    document.body.appendChild(container)
   })
 
-  it('creates panel inside container', () => {
-    const container: any = {
-      classList: { add: vi.fn() },
-      children: [] as any[],
-      appendChild(child: any) { container.children.push(child) },
-      querySelector: () => null,
-    }
-
+  it('adds terasu-ui class to container', () => {
     createUI({ container })
-    expect(container.classList.add).toHaveBeenCalledWith('terasu-ui')
-    expect(container.children.length).toBe(1)
-    expect(container.children[0].className).toBe('terasu-panel')
+    expect(container.classList.contains('terasu-ui')).toBe(true)
   })
 
-  it('generates slider for each param', () => {
-    const container: any = {
-      classList: { add: vi.fn() },
-      children: [] as any[],
-      appendChild(child: any) { container.children.push(child) },
-      querySelector: () => null,
-    }
+  it('renders a panel element inside container', () => {
+    createUI({ container })
+    const panel = container.querySelector('.terasu-panel')
+    expect(panel).not.toBeNull()
+  })
 
+  it('renders a slider for each param in the ParamSet', () => {
     const params = createParamSet()
     params.add('gravity', { value: 9.81, range: [0, 25], unit: 'm/s²' })
     params.add('length', { value: 1, range: [0.1, 5], unit: 'm' })
 
     createUI({ container, params })
-    const panel = container.children[0]
-    // 2 sliders
-    const sliders = panel.children.filter((c: any) => c.className === 'terasu-slider')
+    const sliders = container.querySelectorAll('.terasu-slider')
     expect(sliders.length).toBe(2)
   })
 
-  it('generates playback controls when time provided', () => {
-    const container: any = {
-      classList: { add: vi.fn() },
-      children: [] as any[],
-      appendChild(child: any) { container.children.push(child) },
-      querySelector: () => null,
-    }
+  it('slider has a label with the param name', () => {
+    const params = createParamSet()
+    params.add('gravity', { value: 9.81, range: [0, 25], label: 'Gravity', unit: 'm/s²' })
 
-    const time = createTimeEvolution()
-    createUI({ container, time })
-    const panel = container.children[0]
-    const playback = panel.children.find((c: any) => c.className === 'terasu-playback')
-    expect(playback).toBeDefined()
+    createUI({ container, params })
+    const label = container.querySelector('.terasu-slider label')
+    expect(label).not.toBeNull()
+    expect(label!.textContent).toContain('Gravity')
   })
 
-  it('slider input updates param value', () => {
-    const container: any = {
-      classList: { add: vi.fn() },
-      children: [] as any[],
-      appendChild(child: any) { container.children.push(child) },
-      querySelector: () => null,
-    }
+  it('slider displays current value with unit', () => {
+    const params = createParamSet()
+    params.add('g', { value: 9.81, range: [0, 25], unit: 'm/s²' })
 
+    createUI({ container, params })
+    const valueDisplay = container.querySelector('.terasu-slider-value')
+    expect(valueDisplay).not.toBeNull()
+    expect(valueDisplay!.textContent).toContain('9.81')
+    expect(valueDisplay!.textContent).toContain('m/s²')
+  })
+
+  it('slider input has correct min, max, step, value attributes', () => {
+    const params = createParamSet()
+    params.add('x', { value: 5, range: [0, 10], step: 0.5 })
+
+    createUI({ container, params })
+    const input = container.querySelector('input[type="range"]') as HTMLInputElement
+    expect(input).not.toBeNull()
+    expect(input.min).toBe('0')
+    expect(input.max).toBe('10')
+    expect(input.step).toBe('0.5')
+    expect(input.value).toBe('5')
+  })
+
+  it('dragging slider updates param value', () => {
     const params = createParamSet()
     params.add('x', { value: 5, range: [0, 10] })
 
     createUI({ container, params })
-    const panel = container.children[0]
-    const slider = panel.children[0]
-    // Find the input element (range slider)
-    const input = slider.children.find((c: any) => c.tag === 'input')
-    expect(input).toBeDefined()
+    const input = container.querySelector('input[type="range"]') as HTMLInputElement
 
-    // Simulate user dragging slider
     input.value = '7'
-    input.listeners['input'][0]()
+    input.dispatchEvent(new Event('input'))
     expect(params.get('x')!.value).toBe(7)
   })
 
-  it('play button toggles time running state', () => {
-    const container: any = {
-      classList: { add: vi.fn() },
-      children: [] as any[],
-      appendChild(child: any) { container.children.push(child) },
-      querySelector: () => null,
-    }
+  it('changing param programmatically updates slider and display', () => {
+    const params = createParamSet()
+    params.add('x', { value: 5, range: [0, 10] })
 
+    createUI({ container, params })
+    params.get('x')!.set(3)
+
+    const input = container.querySelector('input[type="range"]') as HTMLInputElement
+    expect(input.value).toBe('3')
+    const valueDisplay = container.querySelector('.terasu-slider-value')
+    expect(valueDisplay!.textContent).toContain('3.00')
+  })
+
+  it('renders playback controls when time is provided', () => {
     const time = createTimeEvolution()
     createUI({ container, time })
-    const panel = container.children[0]
-    const playback = panel.children.find((c: any) => c.className === 'terasu-playback')
-    const playBtn = playback.children.find((c: any) => c.textContent === '▶')
+    const playback = container.querySelector('.terasu-playback')
+    expect(playback).not.toBeNull()
+  })
+
+  it('does not render playback controls when time is not provided', () => {
+    createUI({ container })
+    const playback = container.querySelector('.terasu-playback')
+    expect(playback).toBeNull()
+  })
+
+  it('play button starts with ▶ text', () => {
+    const time = createTimeEvolution()
+    createUI({ container, time })
+    const buttons = container.querySelectorAll('.terasu-btn')
+    const playBtn = buttons[0] as HTMLButtonElement
+    expect(playBtn.textContent).toBe('▶')
+  })
+
+  it('clicking play toggles to pause icon and starts time', () => {
+    const time = createTimeEvolution()
+    createUI({ container, time })
+    const playBtn = container.querySelectorAll('.terasu-btn')[0] as HTMLButtonElement
 
     expect(time.running).toBe(false)
-    playBtn.listeners['click'][0]()
+    playBtn.click()
     expect(time.running).toBe(true)
     expect(playBtn.textContent).toBe('⏸')
-    playBtn.listeners['click'][0]()
+  })
+
+  it('clicking pause toggles back to play icon and stops time', () => {
+    const time = createTimeEvolution()
+    createUI({ container, time })
+    const playBtn = container.querySelectorAll('.terasu-btn')[0] as HTMLButtonElement
+
+    playBtn.click() // play
+    playBtn.click() // pause
     expect(time.running).toBe(false)
     expect(playBtn.textContent).toBe('▶')
   })
 
-  it('reset button resets time and updates button', () => {
-    const container: any = {
-      classList: { add: vi.fn() },
-      children: [] as any[],
-      appendChild(child: any) { container.children.push(child) },
-      querySelector: () => null,
-    }
-
+  it('reset button resets time to 0', () => {
     const time = createTimeEvolution({ dt: 0.1 })
     createUI({ container, time })
     time.play()
     time.stepN(10)
     expect(time.t).toBeGreaterThan(0)
 
-    const panel = container.children[0]
-    const playback = panel.children.find((c: any) => c.className === 'terasu-playback')
-    const resetBtn = playback.children.find((c: any) => c.textContent === '⟲')
-    const playBtn = playback.children.find((c: any) => c.className === 'terasu-btn')
-
-    resetBtn.listeners['click'][0]()
+    const resetBtn = container.querySelectorAll('.terasu-btn')[1] as HTMLButtonElement
+    resetBtn.click()
     expect(time.t).toBe(0)
     expect(time.running).toBe(false)
+  })
+
+  it('reset button resets play button text to ▶', () => {
+    const time = createTimeEvolution()
+    createUI({ container, time })
+    const playBtn = container.querySelectorAll('.terasu-btn')[0] as HTMLButtonElement
+    const resetBtn = container.querySelectorAll('.terasu-btn')[1] as HTMLButtonElement
+
+    playBtn.click() // play
+    expect(playBtn.textContent).toBe('⏸')
+    resetBtn.click()
     expect(playBtn.textContent).toBe('▶')
   })
 
-  it('destroy removes panel', () => {
-    const container: any = {
-      classList: { add: vi.fn() },
-      children: [] as any[],
-      appendChild(child: any) { container.children.push(child) },
-      querySelector: () => null,
-    }
+  it('displays time value', () => {
+    const time = createTimeEvolution()
+    createUI({ container, time })
+    const timeDisplay = container.querySelector('.terasu-time')
+    expect(timeDisplay).not.toBeNull()
+    expect(timeDisplay!.textContent).toBe('t = 0.00')
+  })
 
+  it('injects styles into document head', () => {
+    createUI({ container })
+    const styles = document.querySelectorAll('style')
+    const terasuStyle = Array.from(styles).find(s => s.textContent!.includes('.terasu-panel'))
+    expect(terasuStyle).not.toBeNull()
+  })
+
+  it('destroy removes the panel from DOM', () => {
     const ui = createUI({ container })
-    const panel = container.children[0]
+    expect(container.querySelector('.terasu-panel')).not.toBeNull()
     ui.destroy()
-    expect(panel.remove).toHaveBeenCalled()
+    expect(container.querySelector('.terasu-panel')).toBeNull()
+  })
+
+  it('multiple params render in order', () => {
+    const params = createParamSet()
+    params.add('alpha', { value: 1, range: [0, 10] })
+    params.add('beta', { value: 2, range: [0, 10] })
+    params.add('gamma', { value: 3, range: [0, 10] })
+
+    createUI({ container, params })
+    const sliders = container.querySelectorAll('.terasu-slider')
+    expect(sliders.length).toBe(3)
+    expect(sliders[0]!.querySelector('label')!.textContent).toContain('alpha')
+    expect(sliders[1]!.querySelector('label')!.textContent).toContain('beta')
+    expect(sliders[2]!.querySelector('label')!.textContent).toContain('gamma')
   })
 })

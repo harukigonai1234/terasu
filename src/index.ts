@@ -1,63 +1,20 @@
-export { Vec2, vec2, add, sub, scale, length, lengthSq, normalize, dot } from './vec2'
-export {
-  ScalarField,
-  VectorField,
-  ScalarFieldFn,
-  VectorFieldFn,
-  Domain,
-  ScalarSample,
-  VectorSample,
-  scalarField,
-  vectorField,
-} from './field'
-export { DerivativeFn, euler, rk4 } from './integrators'
-export {
-  DynamicalSystem,
-  System2DConfig,
-  SystemConfig,
-  TrajectoryOptions,
-  FixedPoint,
-  Params,
-  Integrator,
-  dynamicalSystem,
-  dynamicalSystem2D,
-} from './dynamical-system'
-export { Vec3, vec3, add3, sub3, scale3, length3, lengthSq3, normalize3, dot3, cross } from './vec3'
-export {
-  Particle,
-  ParticleState,
-  ParticleConfig,
-  ForceFn,
-  ForceType,
-  createParticle,
-  springForce,
-  constantForce,
-} from './particle'
-export {
-  TimeEvolution,
-  TimeEvolutionConfig,
-  createTimeEvolution,
-} from './time-evolution'
-export {
-  Param,
-  ParamConfig,
-  ParamListener,
-  ParamSet,
-  createParam,
-  createParamSet,
-} from './param'
-export {
-  Renderer,
-  RendererConfig,
-  ScalarRenderOptions,
-  VectorRenderOptions,
-  TrajectoryRenderOptions,
-  ParticleRenderOptions,
-  createRenderer,
-} from './renderer'
-export {
-  UI,
-  UIConfig,
-  createUI,
-  updateUI,
-} from './ui'
+export type { Vec2 } from './vec2'
+export { vec2, add, sub, scale, length, lengthSq, normalize, dot } from './vec2'
+export type { ScalarField, VectorField, ScalarFieldFn, VectorFieldFn, Domain, ScalarSample, VectorSample } from './field'
+export { scalarField, vectorField } from './field'
+export type { DerivativeFn } from './integrators'
+export { euler, rk4 } from './integrators'
+export type { DynamicalSystem, System2DConfig, SystemConfig, TrajectoryOptions, FixedPoint, Params, Integrator } from './dynamical-system'
+export { dynamicalSystem, dynamicalSystem2D } from './dynamical-system'
+export type { Vec3 } from './vec3'
+export { vec3, add3, sub3, scale3, length3, lengthSq3, normalize3, dot3, cross } from './vec3'
+export type { Particle, ParticleState, ParticleConfig, ForceFn, ForceType } from './particle'
+export { createParticle, springForce, constantForce } from './particle'
+export type { TimeEvolution, TimeEvolutionConfig } from './time-evolution'
+export { createTimeEvolution } from './time-evolution'
+export type { Param, ParamConfig, ParamListener, ParamSet } from './param'
+export { createParam, createParamSet } from './param'
+export type { Renderer, RendererConfig, ScalarRenderOptions, VectorRenderOptions, TrajectoryRenderOptions, ParticleRenderOptions } from './renderer'
+export { createRenderer } from './renderer'
+export type { UI, UIConfig } from './ui'
+export { createUI, updateUI } from './ui'

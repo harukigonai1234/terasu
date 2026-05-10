@@ -51,7 +51,7 @@ const ui = createUI({ container: controls, params })
 function draw() {
   const sys = dynamicalSystem2D({
     dx: (x, v) => v,
-    dv: (x, v) => -2 * gamma.value * v - omega.value ** 2 * x,
+    dy: (x, v) => -2 * gamma.value * v - omega.value ** 2 * x,
   })
 
   renderer.clear()
