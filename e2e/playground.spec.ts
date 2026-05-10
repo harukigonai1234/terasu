@@ -148,6 +148,42 @@ test.describe('playground e2e (real browser)', () => {
     expect(Math.abs(pixelsAfter - pixelsBefore)).toBeLessThan(50)
   })
 
+  test('spring: pause freezes particle motion', async ({ page }) => {
+    await page.getByRole('tab', { name: /explore/i }).click()
+    await page.getByTestId('template-card-spring').click()
+    await page.waitForTimeout(1000)
+
+    await page.getByRole('button', { name: /pause/i }).click()
+    await page.waitForTimeout(100)
+
+    // Get particle position via pixel snapshot
+    const snapshot1 = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas')!
+      const ctx = canvas.getContext('2d')!
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+      let count = 0
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) count++
+      }
+      return count
+    })
+
+    await page.waitForTimeout(500)
+
+    const snapshot2 = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas')!
+      const ctx = canvas.getContext('2d')!
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+      let count = 0
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) count++
+      }
+      return count
+    })
+
+    expect(Math.abs(snapshot2 - snapshot1)).toBeLessThan(50)
+  })
+
   test('canvas renders something (not blank)', async ({ page }) => {
     await page.waitForTimeout(1000)
 

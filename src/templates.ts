@@ -218,7 +218,7 @@ draw()`,
     title: 'Mass on Spring',
     description: 'A particle oscillating on a spring. See position, velocity, and energy in real-time.',
     category: 'mechanics',
-    code: `const { createParticle, createRenderer, createParamSet, createUI, createTimeEvolution, springForce, vec2 } = terasu
+    code: `const { createParticle, createRenderer, createParamSet, createUI, springForce, vec2 } = terasu
 
 const params = createParamSet()
 const k = params.add('k', { value: 4, range: [0.1, 20], label: 'Spring constant k' })
@@ -232,12 +232,15 @@ const particle = createParticle({ position: vec2(x0.value, 0), mass: 1 })
 particle.addForce(springForce(vec2(0, 0), k.value))
 particle.trailEnabled = true
 
-const time = createTimeEvolution({ dt: 0.016 })
-time.addParticle(particle)
-time.play()
-
+let lastT = 0
 function draw() {
-  time.step()
+  // Only step particle when playground clock advances
+  const dt = t.value - lastT
+  if (dt > 0) {
+    const steps = Math.round(dt / 0.004)
+    for (let i = 0; i < steps; i++) particle.step(0.004, lastT + i * 0.004)
+    lastT = t.value
+  }
   renderer.clear()
   renderer.drawGrid()
   renderer.drawParticle(particle, { radius: 8, color: '#c74440' })
@@ -268,12 +271,16 @@ particle.addForce((state) => {
 })
 particle.trailEnabled = true
 
+let lastT = 0
 function draw() {
-  particle.step(0.016, 0)
+  const dt = t.value - lastT
+  if (dt > 0) {
+    const steps = Math.round(dt / 0.004)
+    for (let i = 0; i < steps; i++) particle.step(0.004, lastT + i * 0.004)
+    lastT = t.value
+  }
   renderer.clear()
   renderer.drawGrid()
-  // Draw central body
-  const center = renderer.worldToScreen(vec2(0, 0))
   renderer.drawParticle(
     { state: { position: vec2(0, 0), velocity: vec2(0, 0) }, mass: 1, charge: 0, forces: [], trail: [], trailEnabled: false, addForce(){}, inField(){}, netForce(){ return vec2(0,0) }, step(){}, reset(){} },
     { radius: 10, color: '#fa7e19' }
