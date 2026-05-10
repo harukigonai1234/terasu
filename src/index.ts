@@ -22,3 +22,19 @@ export {
   dynamicalSystem,
   dynamicalSystem2D,
 } from './dynamical-system'
+export { Vec3, vec3, add3, sub3, scale3, length3, lengthSq3, normalize3, dot3, cross } from './vec3'
+export {
+  Particle,
+  ParticleState,
+  ParticleConfig,
+  ForceFn,
+  ForceType,
+  createParticle,
+  springForce,
+  constantForce,
+} from './particle'
+export {
+  TimeEvolution,
+  TimeEvolutionConfig,
+  createTimeEvolution,
+} from './time-evolution'
