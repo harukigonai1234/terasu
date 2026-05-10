@@ -6,6 +6,7 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5174',
     headless: true,
+    viewport: { width: 1280, height: 720 },
   },
   webServer: {
     command: 'npx vite --config playground/vite.config.ts playground --port 5174',

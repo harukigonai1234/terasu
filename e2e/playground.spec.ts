@@ -84,7 +84,9 @@ test.describe('grid settings', () => {
   })
 
   test('toggling grid off reduces drawn pixels', async ({ page }) => {
-    // Pause to get stable frames
+    // Use the default dipole example which draws grid + vector field
+    // The dipole loads on start and draws grid. Pixel count includes grid lines.
+    await page.waitForTimeout(1000)
     await page.getByRole('button', { name: /pause/i }).click()
     await page.waitForTimeout(200)
 
@@ -98,14 +100,14 @@ test.describe('grid settings', () => {
       }
       return count
     })
+    expect(pixelsBefore).toBeGreaterThan(100)
 
-    // Open settings and toggle grid off
+    // Toggle grid off — this should remove grid lines while keeping arrows
     await page.getByTestId('grid-settings-btn').click()
-    await page.waitForTimeout(200)
+    await page.waitForTimeout(300)
     await page.getByTestId('toggle-grid').locator('input').click()
-    // Close modal and wait for re-run debounce + render
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(800)
+    // gridSettings change triggers auto-run effect (300ms debounce) + render
+    await page.waitForTimeout(2000)
 
     const pixelsAfter = await page.evaluate(() => {
       const canvas = document.querySelector('canvas')!
@@ -118,6 +120,15 @@ test.describe('grid settings', () => {
       return count
     })
 
+    // Debug: take screenshots
+    await page.screenshot({ path: 'test-results/grid-after.png' })
+
+    // Grid lines should be gone — fewer pixels (arrows remain)
+    // If this still fails with same count, grid isn't being drawn in the first place
+    // (the 5488 pixels are ALL from the vector field arrows)
+    if (pixelsAfter === pixelsBefore) {
+      console.log('SAME pixel count — grid likely not contributing visible pixels over the dipole field')
+    }
     expect(pixelsAfter).toBeLessThan(pixelsBefore)
   })
 
