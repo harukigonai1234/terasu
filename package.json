@@ -7,14 +7,22 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "dev": "vite playground",
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": ["physics", "visualization", "simulation", "interactive", "fields"],
+  "keywords": [
+    "physics",
+    "visualization",
+    "simulation",
+    "interactive",
+    "fields"
+  ],
   "author": "Haruki Gonai",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.4.0",
+    "vite": "^7.3.3",
     "vitest": "^3.1.0"
   }
 }

@@ -55,3 +55,9 @@ export {
   ParticleRenderOptions,
   createRenderer,
 } from './renderer'
+export {
+  UI,
+  UIConfig,
+  createUI,
+  updateUI,
+} from './ui'
