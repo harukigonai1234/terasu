@@ -58,6 +58,7 @@ export function App() {
   const controlsRef = useRef<HTMLDivElement>(null)
   const animFrameRef = useRef<number | null>(null)
   const resizingRef = useRef(false)
+  const rendererRef = useRef<any>(null)
 
   const run = useCallback(() => {
     setError(null)
@@ -81,13 +82,23 @@ export function App() {
     }
 
     try {
+      // Wrap createRenderer to capture reference for zoom controls
+      const wrappedTerasu = {
+        ...terasu,
+        createRenderer(config: any) {
+          const r = terasu.createRenderer(config)
+          rendererRef.current = r
+          return r
+        },
+      }
+
       const wrappedCode = `return (function(terasu, canvas, controls, requestAnimationFrame) { ${code} })`
       const factory = new Function(wrappedCode)()
       const wrappedRAF = (fn: FrameRequestCallback) => {
         animFrameRef.current = window.requestAnimationFrame(fn)
         return animFrameRef.current
       }
-      factory(terasu, canvas, controlsRef.current, wrappedRAF)
+      factory(wrappedTerasu, canvas, controlsRef.current, wrappedRAF)
     } catch (err) {
       setError(String(err))
     }
@@ -240,8 +251,34 @@ export function App() {
         <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <GridSettingsButton onClick={() => setSettingsOpen(true)} />
           <SpaceBetween direction="vertical" size="xxxs">
-            <Button iconName="zoom-in" variant="icon" onClick={() => {/* zoom in */}} ariaLabel="Zoom In" />
-            <Button iconName="zoom-out" variant="icon" onClick={() => {/* zoom out */}} ariaLabel="Zoom Out" />
+            <Button iconName="zoom-in" variant="icon" onClick={() => {
+              const r = rendererRef.current
+              if (!r) return
+              const d = r.getDomain()
+              const cx = (d.xMin + d.xMax) / 2
+              const cy = (d.yMin + d.yMax) / 2
+              const factor = 0.8
+              r.setDomain({
+                xMin: cx + (d.xMin - cx) * factor,
+                xMax: cx + (d.xMax - cx) * factor,
+                yMin: cy + (d.yMin - cy) * factor,
+                yMax: cy + (d.yMax - cy) * factor,
+              })
+            }} ariaLabel="Zoom In" />
+            <Button iconName="zoom-out" variant="icon" onClick={() => {
+              const r = rendererRef.current
+              if (!r) return
+              const d = r.getDomain()
+              const cx = (d.xMin + d.xMax) / 2
+              const cy = (d.yMin + d.yMax) / 2
+              const factor = 1.25
+              r.setDomain({
+                xMin: cx + (d.xMin - cx) * factor,
+                xMax: cx + (d.xMax - cx) * factor,
+                yMin: cy + (d.yMin - cy) * factor,
+                yMax: cy + (d.yMax - cy) * factor,
+              })
+            }} ariaLabel="Zoom Out" />
           </SpaceBetween>
         </div>
 
