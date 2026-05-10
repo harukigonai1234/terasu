@@ -38,3 +38,20 @@ export {
   TimeEvolutionConfig,
   createTimeEvolution,
 } from './time-evolution'
+export {
+  Param,
+  ParamConfig,
+  ParamListener,
+  ParamSet,
+  createParam,
+  createParamSet,
+} from './param'
+export {
+  Renderer,
+  RendererConfig,
+  ScalarRenderOptions,
+  VectorRenderOptions,
+  TrajectoryRenderOptions,
+  ParticleRenderOptions,
+  createRenderer,
+} from './renderer'
