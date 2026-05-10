@@ -46,6 +46,7 @@ function getIntegrator(name: Integrator) {
   return name === 'euler' ? euler : rk4
 }
 
+// Classifies via the trace-determinant plane (Strogatz, Nonlinear Dynamics, §5.2)
 function classifyFixedPoint(jacobian: [number, number, number, number]): { classification: FixedPoint['classification']; eigenvalues: [number, number] } {
   const [a, b, c, d] = jacobian
   const trace = a + d
@@ -121,6 +122,7 @@ export function dynamicalSystem(config: SystemConfig): DynamicalSystem {
       })
     },
 
+    // Grid search with Newton-Raphson from each cell center. Deduplicates within 1e-6.
     fixedPoints(domain: Domain, resolution = 20): FixedPoint[] {
       const dx = (domain.xMax - domain.xMin) / resolution
       const dy = (domain.yMax - domain.yMin) / resolution
