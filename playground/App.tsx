@@ -5,10 +5,13 @@ import Button from '@cloudscape-design/components/button'
 import Modal from '@cloudscape-design/components/modal'
 import SpaceBetween from '@cloudscape-design/components/space-between'
 import Box from '@cloudscape-design/components/box'
+import Tabs from '@cloudscape-design/components/tabs'
 import * as terasu from '../src/index'
 import { examples } from './examples'
 import { GridSettingsPanel, GridSettingsButton } from '../src/grid-settings-panel'
 import { defaultGridSettings, GridSettings } from '../src/grid-settings'
+import { TemplateGallery } from '../src/template-gallery'
+import type { Template } from '../src/templates'
 
 const TERASU_TYPES = `
 declare const terasu: {
@@ -54,6 +57,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [gridSettings, setGridSettings] = useState<GridSettings>(defaultGridSettings())
   const [panelWidth, setPanelWidth] = useState(380)
+  const [activeTab, setActiveTab] = useState<string>('templates')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const animFrameRef = useRef<number | null>(null)
@@ -197,53 +201,79 @@ export function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0f1b2d' }}>
-      {/* Left panel: expression list / code editor */}
-      <div style={{ width: `${panelWidth}px`, display: 'flex', flexDirection: 'column', borderRight: '1px solid #414d5c', flexShrink: 0 }}>
-        {/* Toolbar */}
-        <div style={{ padding: '8px 12px', borderBottom: '1px solid #414d5c', display: 'flex', alignItems: 'center', gap: '8px', background: '#1a2332' }}>
-          <Select
-            selectedOption={selectedExample}
-            onChange={({ detail }) => {
-              setSelectedExample(detail.selectedOption as typeof selectedExample)
-              handleExampleChange(detail.selectedOption.value!)
-            }}
-            options={exampleOptions}
-            expandToViewport
-          />
-          <Button variant="primary" onClick={run}>Run</Button>
-        </div>
+      {/* Left panel: tabs for templates / code */}
+      <div style={{ width: `${panelWidth}px`, display: 'flex', flexDirection: 'column', borderRight: '1px solid #414d5c', flexShrink: 0, background: '#1a2332' }}>
+        <Tabs
+          activeTabId={activeTab}
+          onChange={({ detail }) => setActiveTab(detail.activeTabId)}
+          tabs={[
+            {
+              id: 'templates',
+              label: 'Explore',
+              content: (
+                <div style={{ padding: '12px', overflow: 'auto', height: 'calc(100vh - 100px)' }}>
+                  <TemplateGallery onSelect={(t: Template) => {
+                    setCode(t.code)
+                    setActiveTab('code')
+                  }} />
+                </div>
+              ),
+            },
+            {
+              id: 'code',
+              label: 'Code',
+              content: (
+                <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
+                  {/* Toolbar */}
+                  <div style={{ padding: '8px 12px', borderBottom: '1px solid #414d5c', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Select
+                      selectedOption={selectedExample}
+                      onChange={({ detail }) => {
+                        setSelectedExample(detail.selectedOption as typeof selectedExample)
+                        handleExampleChange(detail.selectedOption.value!)
+                      }}
+                      options={exampleOptions}
+                      expandToViewport
+                    />
+                    <Button variant="primary" onClick={run}>Run</Button>
+                  </div>
 
-        {/* Editor */}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <Editor
-            height="100%"
-            language="javascript"
-            theme="vs-dark"
-            value={code}
-            onChange={(value) => setCode(value ?? '')}
-            onMount={handleEditorMount}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 13,
-              lineNumbers: 'on',
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-              wordWrap: 'on',
-              padding: { top: 8 },
-            }}
-          />
-        </div>
+                  {/* Editor */}
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <Editor
+                      height="100%"
+                      language="javascript"
+                      theme="vs-dark"
+                      value={code}
+                      onChange={(value) => setCode(value ?? '')}
+                      onMount={handleEditorMount}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        tabSize: 2,
+                        wordWrap: 'on',
+                        padding: { top: 8 },
+                      }}
+                    />
+                  </div>
 
-        {/* Controls area */}
-        <div style={{ borderTop: '1px solid #414d5c', padding: '8px 12px', maxHeight: '200px', overflow: 'auto', background: '#1a2332' }}>
-          <div ref={controlsRef} />
-          {error && (
-            <Box color="text-status-error" variant="code">
-              {error}
-            </Box>
-          )}
-        </div>
+                  {/* Controls area */}
+                  <div style={{ borderTop: '1px solid #414d5c', padding: '8px 12px', maxHeight: '200px', overflow: 'auto' }}>
+                    <div ref={controlsRef} />
+                    {error && (
+                      <Box color="text-status-error" variant="code">
+                        {error}
+                      </Box>
+                    )}
+                  </div>
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {/* Resize handle */}
